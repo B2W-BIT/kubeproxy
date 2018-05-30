@@ -5,7 +5,7 @@ import io.kubernetes.client.Configuration
 import io.kubernetes.client.apis.CoreV1Api
 import io.kubernetes.client.util.Config
 
-class ServicesClient(namespace_name: String) {
+class ServicesClient(namespace_name: String, kubernetesLikeDomain:Boolean = false) {
 
   val client:ApiClient = Config.defaultClient()
   Configuration.setDefaultApiClient(client)
@@ -23,8 +23,10 @@ class ServicesClient(namespace_name: String) {
 
   def destinationPortCannary():Int = destination_port_cannary
 
-  def destinationHostStable(stableSelector:String):String = destination_host_stable
+  def destinationHostStable(stableSelector:String):String =
+    if(kubernetesLikeDomain) s"$destination_host_stable.$namespace_name" else destination_host_stable
 
-  def destinationHostCannary():String = destination_host_cannary
+  def destinationHostCannary():String =
+    if(kubernetesLikeDomain) s"$destination_host_cannary.$namespace_name" else destination_host_cannary
 
 }
