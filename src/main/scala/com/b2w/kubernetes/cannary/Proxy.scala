@@ -1,12 +1,12 @@
 package com.b2w.kubernetes.cannary
 
 import akka.actor.ActorSystem
-import akka.http.javadsl.server.RouteResult
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.http.scaladsl.server.RequestContext
+import kube_integration.ServicesClient
+import rules.DecisionRule
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -17,25 +17,25 @@ object Proxy extends App {
   implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   val source_port:Integer = Integer.valueOf(System.getenv("SOURCE_PORT"))
-  val source_host:String = System.getenv("SOURCE_HOST")
+  val source_host:String = "0.0.0.0"
 
-  val destination_port_stable:Int = System.getenv("DESTINATION_PORT_STABLE").toInt
-  val destination_port_cannary:Int = System.getenv("DESTINATION_PORT_CANNARY").toInt
-
-  val destination_host:String = System.getenv("DESTINATION_HOST")
+  val serviceClient = new ServicesClient("poc-andre")
+  val rule = new DecisionRule()
 
   val proxy = Route { context:RequestContext =>
     val request = context.request
-    val mapHeaders:Map[String, String]
+    val headers:Map[String, String]
           = request.headers.map( h => h.name() -> h.value()).toMap
+    val query = request.uri.query().toMap
 
-    mapHeaders.getOrElse("version", None) match {
+    rule.decide(headers, query) match {
       case "stable" =>
-          doRoute(context, destination_host, destination_port_stable)
+          doRoute(context, serviceClient.destination_host_stable, serviceClient.destination_port_stable)
       case "cannary" =>
-          doRoute(context, destination_host, destination_port_cannary)
+          doRoute(context, serviceClient.destination_host_cannary, serviceClient.destination_port_cannary)
       case _ =>
-          doRoute(context, destination_host, destination_port_stable)
+        doRoute(context, serviceClient.destination_host_stable, serviceClient.destination_port_stable)
+
     }
   }
 
