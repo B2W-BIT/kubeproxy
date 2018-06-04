@@ -12,7 +12,7 @@ class DecisionRule() {
     loadDecision()
     try{
       if(headers.isEmpty || query.isEmpty )
-        return "empty"
+        "empty"
       else
         decision(headers, query)
     }
